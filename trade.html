@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradePilot — Algorithmic Trading Dashboard</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0b0f19;
+      --panel: #111827;
+      --panel-light: #151e2e;
+      --border: #202b3d;
+      --text: #f1f5f9;
+      --muted: #7f8da3;
+      --green: #20d89a;
+      --red: #ff5d73;
+      --blue: #6c7cff;
+      --yellow: #f5b942;
+      --shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* ================= LAYOUT ================= */
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ================= SIDEBAR ================= */
+
+    .sidebar {
+      width: 245px;
+      background: #0e1420;
+      border-right: 1px solid var(--border);
+      padding: 25px 16px;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 12px;
+      margin-bottom: 42px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6875ff, #4654e8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 19px;
+      font-weight: 800;
+    }
+
+    .logo h2 {
+      font-size: 18px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: #7d8aff;
+    }
+
+    .nav-label {
+      color: #56647a;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      padding: 0 14px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 14px;
+      border-radius: 9px;
+      color: #8491a7;
+      font-size: 12px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .nav-item:hover {
+      background: #172133;
+      color: white;
+    }
+
+    .nav-item.active {
+      background: #20264a;
+      color: #8490ff;
+    }
+
+    .nav-icon {
+      width: 19px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+    }
+
+    .connection-card {
+      padding: 15px;
+      background: #121d2b;
+      border: 1px solid #243249;
+      border-radius: 12px;
+      margin: 15px 5px 22px;
+    }
+
+    .connection-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(32, 216, 154, 0.6);
+    }
+
+    .connection-card p {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .user-profile {
+      border-top: 1px solid var(--border);
+      padding: 20px 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 35px;
+      height: 35px;
+      background: linear-gradient(135deg, #5d6bff, #a16bff);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-info strong {
+      font-size: 11px;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .user-info span {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .more-icon {
+      color: #68758a;
+    }
+
+    /* ================= MAIN ================= */
+
+    .main {
+      margin-left: 245px;
+      flex: 1;
+      padding: 28px 35px;
+      max-width: 1650px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .page-title h1 {
+      font-size: 24px;
+      letter-spacing: -0.8px;
+      margin-bottom: 7px;
+    }
+
+    .page-title p {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .market-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 10px;
+      color: #a1aec0;
+    }
+
+    .market-status .status-dot {
+      width: 6px;
+      height: 6px;
+    }
+
+    .icon-btn {
+      width: 37px;
+      height: 37px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      color: #a2aec0;
+      font-size: 16px;
+    }
+
+    /* ================= SUMMARY CARDS ================= */
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 17px;
+      margin-bottom: 22px;
+    }
+
+    .summary-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 17px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .summary-icon {
+      width: 31px;
+      height: 31px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .icon-purple {
+      color: #8992ff;
+      background: #25254a;
+    }
+
+    .icon-green {
+      color: var(--green);
+      background: #153b35;
+    }
+
+    .icon-red {
+      color: var(--red);
+      background: #3c2330;
+    }
+
+    .icon-blue {
+      color: #65aaff;
+      background: #1c3048;
+    }
+
+    .summary-number {
+      font-size: 25px;
+      font-weight: 750;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+
+    .summary-bottom {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .positive {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .negative {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    /* ================= GRID ================= */
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .left-column,
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 21px;
+    }
+
+    .panel-header h3 {
+      font-size: 14px;
+      letter-spacing: -0.3px;
+    }
+
+    .panel-header p {
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 5px;
+    }
+
+    .view-link {
+      color: #8992ff;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ================= BOT CONTROL ================= */
+
+    .bot-panel {
+      background: linear-gradient(125deg, #161d3c, #121827);
+      border-color: #2a3566;
+    }
+
+    .bot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .bot-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bot-icon {
+      width: 41px;
+      height: 41px;
+      background: #292b63;
+      color: #8790ff;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+    }
+
+    .bot-title h3 {
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .bot-title p {
+      color: #7785a1;
+      font-size: 10px;
+    }
+
+    .bot-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      background: #143a32;
+      padding: 7px 10px;
+      border-radius: 6px;
+    }
+
+    .bot-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .bot-stat {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid #263153;
+      border-radius: 9px;
+      padding: 13px;
+    }
+
+    .bot-stat span {
+      display: block;
+      color: #7785a1;
+      font-size: 9px;
+      margin-bottom: 7px;
+    }
+
+    .bot-stat strong {
+      font-size: 14px;
+    }
+
+    .bot-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .primary-btn {
+      background: #6974ff;
+      color: white;
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      transition: 0.2s;
+    }
+
+    .primary-btn:hover {
+      background: #5864ec;
+    }
+
+    .secondary-btn {
+      background: #202a42;
+      color: #aab4ca;
+      border: 1px solid #303d5a;
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* ================= MARKET CHART ================= */
+
+    .chart-tools {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .asset-select {
+      background: #192235;
+      color: #d4dbea;
+      border: 1px solid #2b3850;
+      border-radius: 7px;
+      padding: 8px 11px;
+      font-size: 10px;
+      outline: none;
+    }
+
+    .time-tabs {
+      display: flex;
+      gap: 4px;
+      background: #0e1522;
+      padding: 4px;
+      border-radius: 7px;
+    }
+
+    .time-tab {
+      background: transparent;
+      color: #6f7c92;
+      padding: 6px 9px;
+      border-radius: 5px;
+      font-size: 9px;
+    }
+
+    .time-tab.active {
+      background: #293358;
+      color: #9ba4ff;
+    }
+
+    .price-info {
+      margin-bottom: 15px;
+    }
+
+    .price-info strong {
+      font-size: 26px;
+      letter-spacing: -1px;
+    }
+
+    .price-info span {
+      color: var(--green);
+      font-size: 11px;
+      margin-left: 10px;
+      font-weight: 700;
+    }
+
+    .chart-container {
+      height: 245px;
+      position: relative;
+      border-left: 1px solid #253044;
+      border-bottom: 1px solid #253044;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 48px,
+        #1b2637 49px
+      );
+    }
+
+    .chart-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: calc(100% - 25px);
+      overflow: visible;
+    }
+
+    .chart-y-labels {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: calc(100% - 25px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transform: translateX(45px);
+      color: #58677e;
+      font-size: 9px;
+    }
+
+    .chart-x-labels {
+      position: absolute;
+      bottom: -22px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-around;
+      color: #58677e;
+      font-size: 9px;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 18px;
+      margin-top: 30px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .dot-green {
+      background: var(--green);
+    }
+
+    .dot-blue {
+      background: #6c7cff;
+    }
+
+    /* ================= POSITIONS ================= */
+
+    .positions-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .positions-table th {
+      text-align: left;
+      color: #68778e;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 0 8px 13px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .positions-table td {
+      padding: 15px 8px;
+      font-size: 11px;
+      border-bottom: 1px solid #1d2737;
+    }
+
+    .positions-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .asset-name {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 700;
+    }
+
+    .asset-icon {
+      width: 27px;
+      height: 27px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .btc {
+      background: #3c2e1e;
+      color: #f7931a;
+    }
+
+    .aapl {
+      background: #30343c;
+      color: white;
+    }
+
+    .eth {
+      background: #2b3150;
+      color: #9ba8ff;
+    }
+
+    .asset-symbol {
+      display: block;
+      color: #68778e;
+      font-size: 9px;
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    .green-text {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .red-text {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    /* ================= STRATEGY ================= */
+
+    .strategy-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .strategy-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px;
+      border: 1px solid #202c3e;
+      border-radius: 10px;
+      transition: 0.2s;
+    }
+
+    .strategy-item:hover {
+      border-color: #384768;
+    }
+
+    .strategy-icon {
+      width: 34px;
+      height: 34px;
+      background: #1c2940;
+      color: #8994ff;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .strategy-info {
+      flex: 1;
+    }
+
+    .strategy-info strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+
+    .strategy-info span {
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .toggle {
+      width: 35px;
+      height: 20px;
+      background: #29364b;
+      border-radius: 20px;
+      padding: 3px;
+      transition: 0.2s;
+      position: relative;
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #77859a;
+      border-radius: 50%;
+      left: 3px;
+      top: 3px;
+      transition: 0.2s;
+    }
+
+    .toggle.active {
+      background: #315d54;
+    }
+
+    .toggle.active::after {
+      left: 18px;
+      background: var(--green);
+    }
+
+    /* ================= RISK ================= */
+
+    .risk-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 13px;
+    }
+
+    .risk-row span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .risk-row strong {
+      font-size: 13px;
+    }
+
+    .risk-bar {
+      height: 8px;
+      background: #202c3d;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .risk-fill {
+      width: 34%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--yellow));
+      border-radius: 20px;
+    }
+
+    .risk-description {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    /* ================= TRADES ================= */
+
+    .trade-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .trade-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .trade-type {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .buy {
+      background: #153d35;
+      color: var(--green);
+    }
+
+    .sell {
+      background: #3c2430;
+      color: var(--red);
+    }
+
+    .trade-info {
+      flex: 1;
+    }
+
+    .trade-info strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .trade-info span {
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .trade-price {
+      text-align: right;
+    }
+
+    .trade-price strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .trade-price span {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    /* ================= TOAST ================= */
+
+    .toast {
+      position: fixed;
+      right: 25px;
+      bottom: 25px;
+      background: #e9eef8;
+      color: #121a29;
+      padding: 13px 19px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: 0.3s;
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* ================= RESPONSIVE ================= */
+
+    @media (max-width: 1200px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .right-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 850px) {
+      .sidebar {
+        width: 70px;
+        padding: 25px 10px;
+      }
+
+      .logo {
+        padding: 0;
+        justify-content: center;
+      }
+
+      .logo h2,
+      .nav-label,
+      .nav-item span:not(.nav-icon),
+      .connection-card,
+      .user-info,
+      .more-icon {
+        display: none;
+      }
+
+      .nav-item {
+        justify-content: center;
+        padding: 13px;
+      }
+
+      .user-profile {
+        justify-content: center;
+      }
+
+      .main {
+        margin-left: 70px;
+        padding: 22px 20px;
+      }
+
+      .right-column {
+        display: flex;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .main {
+        padding: 18px 13px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        gap: 15px;
+      }
+
+      .page-title h1 {
+        font-size: 20px;
+      }
+
+      .market-status {
+        display: none;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .summary-card {
+        padding: 15px;
+      }
+
+      .summary-number {
+        font-size: 21px;
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .bot-stats {
+        gap: 7px;
+      }
+
+      .bot-stat {
+        padding: 10px;
+      }
+
+      .bot-controls {
+        flex-wrap: wrap;
+      }
+
+      .chart-tools {
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      .positions-table {
+        min-width: 530px;
+      }
+
+      .panel:has(.positions-table) {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+      <div class="logo">
+        <div class="logo-icon">↗</div>
+        <h2>Trade<span>Pilot</span></h2>
+      </div>
+
+      <div class="nav-label">Trading</div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active">
+          <span class="nav-icon">▦</span>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">◈</span>
+          <span>Markets</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">↗</span>
+          <span>My Portfolio</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">⚙</span>
+          <span>Trading Bots</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">◷</span>
+          <span>Trade History</span>
+        </a>
+      </nav>
+
+      <div class="nav-label" style="margin-top: 32px;">Management</div>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item">
+          <span class="nav-icon">▥</span>
+          <span>Analytics</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">⚠</span>
+          <span>Risk Management</span>
+        </a>
+
+        <a href="#" class="nav-item">
+          <span class="nav-icon">⚙</span>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+
+        <div class="connection-card">
+          <div class="connection-title">
+            <span class="status-dot"></span>
+            Exchange Connected
+          </div>
+          <p>Demo trading environment<br />API connection is secure</p>
+        </div>
+
+        <div class="user-profile">
+          <div class="avatar">NH</div>
+          <div class="user-info">
+            <strong>Nazmul Huda</strong>
+            <span>Demo Account</span>
+          </div>
+          <span class="more-icon">•••</span>
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+      <!-- TOPBAR -->
+
+      <header class="topbar">
+
+        <div class="page-title">
+          <h1>Trading Overview</h1>
+          <p>Monitor your automated strategies and portfolio performance.</p>
+        </div>
+
+        <div class="top-actions">
+
+          <div class="market-status">
+            <span class="status-dot"></span>
+            Markets Live
+          </div>
+
+          <button class="icon-btn" onclick="showToast('Notifications opened')">
+            ♧
+          </button>
+
+          <button class="icon-btn" onclick="showToast('Settings opened')">
+            ⚙
+          </button>
+
+        </div>
+
+      </header>
+
+      <!-- SUMMARY -->
+
+      <section class="summary-grid">
+
+        <div class="summary-card">
+          <div class="summary-top">
+            <span class="summary-label">Portfolio Value</span>
+            <div class="summary-icon icon-purple">◈</div>
+          </div>
+          <div class="summary-number" id="portfolioValue">$24,680.50</div>
+          <div class="summary-bottom">
+            <span class="positive">↑ 12.48%</span>
+            <span>vs last month</span>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-top">
+            <span class="summary-label">Today's P&L</span>
+            <div class="summary-icon icon-green">↗</div>
+          </div>
+          <div class="summary-number positive">+$428.20</div>
+          <div class="summary-bottom">
+            <span class="positive">+1.76%</span>
+            <span>today</span>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-top">
+            <span class="summary-label">Active Positions</span>
+            <div class="summary-icon icon-blue">◉</div>
+          </div>
+          <div class="summary-number">08</div>
+          <div class="summary-bottom">
+            <span>5 Crypto</span>
+            <span>·</span>
+            <span>3 Stocks</span>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-top">
+            <span class="summary-label">Win Rate</span>
+            <div class="summary-icon icon-green">✓</div>
+          </div>
+          <div class="summary-number">74.2%</div>
+          <div class="summary-bottom">
+            <span class="positive">↑ 4.8%</span>
+            <span>this month</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- DASHBOARD -->
+
+      <div class="dashboard-grid">
+
+        <!-- LEFT COLUMN -->
+
+        <div class="left-column">
+
+          <!-- BOT CONTROL -->
+
+          <section class="panel bot-panel">
+
+            <div class="bot-header">
+
+              <div class="bot-title">
+                <div class="bot-icon">⚡</div>
+                <div>
+                  <h3>Momentum Trading Bot</h3>
+                  <p>Automated strategy · BTC / ETH / AAPL</p>
+                </div>
+              </div>
+
+              <div class="bot-status" id="botStatus">
+                <span class="status-dot"></span>
+                <span id="botStatusText">Running</span>
+              </div>
+
+            </div>
+
+            <div class="bot-stats">
+
+              <div class="bot-stat">
+                <span>Strategy</span>
+                <strong>Momentum</strong>
+              </div>
+
+              <div class="bot-stat">
+                <span>Today's Trades</span>
+                <strong id="tradeCount">12</strong>
+              </div>
+
+              <div class="bot-stat">
+                <span>Bot P&L</span>
+                <strong class="positive">+$186.40</strong>
+              </div>
+
+            </div>
+
+            <div class="bot-controls">
+              <button class="primary-btn" id="botToggle" onclick="toggleBot()">
+                ⏸ Pause Bot
+              </button>
+
+              <button class="secondary-btn" onclick="showToast('Bot configuration opened')">
+                ⚙ Configure
+              </button>
+
+              <button class="secondary-btn" onclick="showToast('Backtest report opened')">
+                View Backtest
+              </button>
+            </div>
+
+          </section>
+
+          <!-- MARKET CHART -->
+
+          <section class="panel">
+
+            <div class="panel-header">
+
+              <div>
+                <h3>Market Overview</h3>
+                <p>Real-time demo price movement</p>
+              </div>
+
+              <div class="chart-tools">
+
+                <select class="asset-select" id="assetSelect" onchange="changeAsset()">
+                  <option value="BTC">BTC / USD</option>
+                  <option value="ETH">ETH / USD</option>
+                  <option value="AAPL">AAPL</option>
+                  <option value="TSLA">TSLA</option>
+                </select>
+
+                <div class="time-tabs">
+                  <button class="time-tab">1H</button>
+                  <button class="time-tab active">1D</button>
+                  <button class="time-tab">1W</button>
+                  <button class="time-tab">1M</button>
+                </div>
+
+              </div>
+
+            </div>
+
+            <div class="price-info">
+              <strong id="assetPrice">$67,842.20</strong>
+              <span id="assetChange">+2.48% ▲</span>
+            </div>
+
+            <div class="chart-container">
+
+              <svg class="chart-svg" viewBox="0 0 600 220" preserveAspectRatio="none">
+
+                <defs>
+                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#20d89a" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="#20d89a" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+
+                <path
+                  d="M0,165 C25,150 38,158 65,140 S105,145 130,120 S170,135 195,105 S230,115 255,90 S295,105 320,80 S350,95 375,70 S410,82 435,52 S470,70 495,45 S535,55 560,30 S585,42 600,20 L600,220 L0,220 Z"
+                  fill="url(#areaGradient)"
+                />
+
+                <path
+                  d="M0,165 C25,150 38,158 65,140 S105,145 130,120 S170,135 195,105 S230,115 255,90 S295,105 320,80 S350,95 375,70 S410,82 435,52 S470,70 495,45 S535,55 560,30 S585,42 600,20"
+                  fill="none"
+                  stroke="#20d89a"
+                  stroke-width="2.5"
+                  vector-effect="non-scaling-stroke"
+                />
+
+              </svg>
+
+              <div class="chart-y-labels">
+                <span>68,500</span>
+                <span>68,000</span>
+                <span>67,500</span>
+                <span>67,000</span>
+                <span>66,500</span>
+              </div>
+
+              <div class="chart-x-labels">
+                <span>09:00</span>
+                <span>11:00</span>
+                <span>13:00</span>
+                <span>15:00</span>
+                <span>17:00</span>
+              </div>
+
+            </div>
+
+            <div class="chart-legend">
+              <div class="legend">
+                <span class="legend-dot dot-green"></span>
+                Price
+              </div>
+              <div class="legend">
+                <span class="legend-dot dot-blue"></span>
+                Bot Entry / Exit
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ACTIVE POSITIONS -->
+
+          <section class="panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>Active Positions</h3>
+                <p>Your currently open trades</p>
+              </div>
+              <span class="view-link" onclick="showToast('All positions opened')">
+                View all →
+              </span>
+            </div>
+
+            <table class="positions-table">
+
+              <thead>
+                <tr>
+                  <th>ASSET</th>
+                  <th>ENTRY PRICE</th>
+                  <th>CURRENT PRICE</th>
+                  <th>QUANTITY</th>
+                  <th>P&L</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                <tr>
+                  <td>
+                    <div class="asset-name">
+                      <div class="asset-icon btc">₿</div>
+                      <div>
+                        Bitcoin
+                        <span class="asset-symbol">BTC / USD</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>$65,240.00</td>
+                  <td>$67,842.20</td>
+                  <td>0.12 BTC</td>
+                  <td class="green-text">+$312.26</td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <div class="asset-name">
+                      <div class="asset-icon aapl">A</div>
+                      <div>
+                        Apple Inc.
+                        <span class="asset-symbol">AAPL</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>$224.50</td>
+                  <td>$228.75</td>
+                  <td>25 shares</td>
+                  <td class="green-text">+$106.25</td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <div class="asset-name">
+                      <div class="asset-icon eth">◆</div>
+                      <div>
+                        Ethereum
+                        <span class="asset-symbol">ETH / USD</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>$3,420.00</td>
+                  <td>$3,388.40</td>
+                  <td>1.5 ETH</td>
+                  <td class="red-text">-$47.40</td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </section>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+
+        <div class="right-column">
+
+          <!-- STRATEGIES -->
+
+          <section class="panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>Trading Strategies</h3>
+                <p>Manage your automated strategies</p>
+              </div>
+              <span class="view-link" onclick="showToast('Strategy manager opened')">
+                Manage
+              </span>
+            </div>
+
+            <div class="strategy-list">
+
+              <div class="strategy-item">
+                <div class="strategy-icon">↗</div>
+                <div class="strategy-info">
+                  <strong>Momentum Strategy</strong>
+                  <span>Trend-following · 74.2% win rate</span>
+                </div>
+                <div class="toggle active" onclick="toggleStrategy(this)"></div>
+              </div>
+
+              <div class="strategy-item">
+                <div class="strategy-icon">〽</div>
+                <div class="strategy-info">
+                  <strong>Mean Reversion</strong>
+                  <span>Price reversal · 68.5% win rate</span>
+                </div>
+                <div class="toggle active" onclick="toggleStrategy(this)"></div>
+              </div>
+
+              <div class="strategy-item">
+                <div class="strategy-icon">◉</div>
+                <div class="strategy-info">
+                  <strong>Grid Trading</strong>
+                  <span>Range-based · 61.3% win rate</span>
+                </div>
+                <div class="toggle" onclick="toggleStrategy(this)"></div>
+              </div>
+
+            </div>
+
+          </section>
+
+          <!-- RISK -->
+
+          <section class="panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>Risk Overview</h3>
+                <p>Portfolio risk monitoring</p>
+              </div>
+              <span class="view-link" onclick="showToast('Risk settings opened')">
+                Settings
+              </span>
+            </div>
+
+            <div class="risk-row">
+              <span>Current Risk Exposure</span>
+              <strong>34%</strong>
+            </div>
+
+            <div class="risk-bar">
+              <div class="risk-fill"></div>
+            </div>
+
+            <p class="risk-description">
+              Your portfolio is currently within your configured risk
+              limits. Maximum allowed exposure is 60%.
+            </p>
+
+          </section>
+
+          <!-- RECENT TRADES -->
+
+          <section class="panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>Recent Trades</h3>
+                <p>Latest automated executions</p>
+              </div>
+              <span class="view-link" onclick="showToast('Trade history opened')">
+                View all →
+              </span>
+            </div>
+
+            <div class="trade-list">
+
+              <div class="trade-item">
+                <div class="trade-type buy">↗</div>
+                <div class="trade-info">
+                  <strong>BUY · BTC / USD</strong>
+                  <span>Momentum Bot · 2 min ago</span>
+                </div>
+                <div class="trade-price">
+                  <strong>$67,420.00</strong>
+                  <span class="green-text">+0.12%</span>
+                </div>
+              </div>
+
+              <div class="trade-item">
+                <div class="trade-type sell">↘</div>
+                <div class="trade-info">
+                  <strong>SELL · ETH / USD</strong>
+                  <span>Mean Reversion · 18 min ago</span>
+                </div>
+                <div class="trade-price">
+                  <strong>$3,410.20</strong>
+                  <span class="green-text">+$42.80</span>
+                </div>
+              </div>
+
+              <div class="trade-item">
+                <div class="trade-type buy">↗</div>
+                <div class="trade-info">
+                  <strong>BUY · AAPL</strong>
+                  <span>Momentum Bot · 35 min ago</span>
+                </div>
+                <div class="trade-price">
+                  <strong>$228.10</strong>
+                  <span class="green-text">+0.45%</span>
+                </div>
+              </div>
+
+              <div class="trade-item">
+                <div class="trade-type sell">↘</div>
+                <div class="trade-info">
+                  <strong>SELL · TSLA</strong>
+                  <span>Momentum Bot · 1 hr ago</span>
+                </div>
+                <div class="trade-price">
+                  <strong>$342.60</strong>
+                  <span class="green-text">+$28.40</span>
+                </div>
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- TOAST -->
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+
+  <script>
+
+    let botRunning = true;
+
+    // Toggle trading bot
+    function toggleBot() {
+      botRunning = !botRunning;
+
+      const button = document.getElementById("botToggle");
+      const status = document.getElementById("botStatus");
+      const statusText = document.getElementById("botStatusText");
+
+      if (botRunning) {
+        button.textContent = "⏸ Pause Bot";
+        statusText.textContent = "Running";
+        status.style.color = "#20d89a";
+        status.style.background = "#143a32";
+        showToast("Trading bot resumed");
+      } else {
+        button.textContent = "▶ Resume Bot";
+        statusText.textContent = "Paused";
+        status.style.color = "#f5b942";
+        status.style.background = "#3d321d";
+        showToast("Trading bot paused");
+      }
+    }
+
+    // Toggle individual strategies
+    function toggleStrategy(element) {
+      element.classList.toggle("active");
+
+      if (element.classList.contains("active")) {
+        showToast("Strategy enabled");
+      } else {
+        showToast("Strategy disabled");
+      }
+    }
+
+    // Change asset demo price
+    function changeAsset() {
+      const asset = document.getElementById("assetSelect").value;
+      const priceElement = document.getElementById("assetPrice");
+      const changeElement = document.getElementById("assetChange");
+
+      const assets = {
+        BTC: { price: "$67,842.20", change: "+2.48% ▲" },
+        ETH: { price: "$3,388.40", change: "+1.72% ▲" },
+        AAPL: { price: "$228.75", change: "+0.86% ▲" },
+        TSLA: { price: "$342.60", change: "-1.24% ▼" }
+      };
+
+      priceElement.textContent = assets[asset].price;
+      changeElement.textContent = assets[asset].change;
+
+      if (assets[asset].change.includes("-")) {
+        changeElement.style.color = "#ff5d73";
+      } else {
+        changeElement.style.color = "#20d89a";
+      }
+
+      showToast(`${asset} market data selected`);
+    }
+
+    // Toast notification
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2500);
+    }
+
+    // Navigation demo
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.addEventListener("click", function(event) {
+        event.preventDefault();
+
+        document.querySelectorAll(".nav-item").forEach(nav => {
+          nav.classList.remove("active");
+        });
+
+        this.classList.add("active");
+        showToast(`${this.textContent.trim()} selected`);
+      });
+    });
+
+  </script>
+
+</body>
+</html>
