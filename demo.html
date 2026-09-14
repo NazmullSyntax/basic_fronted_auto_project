@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Email Triage Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f5ff',
+                            100: '#e0ebff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                            glow: '#6366f1',
+                        },
+                        dark: {
+                            base: '#090d16',
+                            surface: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                        }
+                    },
+                    boxShadow: {
+                        'glow-sm': '0 0 15px -3px rgba(99, 102, 241, 0.3)',
+                        'glow-md': '0 0 25px -5px rgba(99, 102, 241, 0.4)',
+                        'glow-lg': '0 0 35px -5px rgba(147, 51, 234, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Pulsing Glow Animation */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Subtle Shimmer for AI badges */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .ai-shimmer {
+            background: linear-gradient(90deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.25) 50%, rgba(99,102,241,0.1) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased bg-dark-base text-slate-100 selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP HEADER -->
+    <header class="h-16 border-b border-slate-800 bg-slate-900/80 glass-panel sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-glow-sm">
+                <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-200 bg-clip-text text-transparent">
+                        NexusTriage <span class="text-xs font-mono font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 ml-1">v2.4 AI Agent</span>
+                    </h1>
+                </div>
+                <p class="text-xs text-slate-400">Autonomous Email & CRM Orchestrator</p>
+            </div>
+        </div>
+
+        <!-- AI Agent Status Indicator -->
+        <div class="flex items-center space-x-4">
+            <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-950/70 border border-slate-800">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-medium text-emerald-400" id="agent-status-text">Agent Active & Listening</span>
+            </div>
+
+            <!-- Action Button -->
+            <button onclick="triggerSimulateEmail()" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs transition-all duration-200 shadow-glow-sm active:scale-95">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>Simulate Email</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- METRICS SUMMARY BAR -->
+    <section class="border-b border-slate-800/80 bg-slate-900/40 px-4 md:px-6 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <i data-lucide="mail-check" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Processed Today</p>
+                <p class="text-lg font-bold text-white tracking-tight" id="stat-processed">142</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">High Priority</p>
+                <p class="text-lg font-bold text-rose-400 tracking-tight" id="stat-priority">3 Pending</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <i data-lucide="file-signature" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Drafts Ready</p>
+                <p class="text-lg font-bold text-purple-300 tracking-tight" id="stat-drafted">18</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">CRM Synced</p>
+                <p class="text-lg font-bold text-emerald-400 tracking-tight" id="stat-crm">98.4%</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3 col-span-2 sm:col-span-1">
+            <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Time Saved</p>
+                <p class="text-lg font-bold text-amber-300 tracking-tight" id="stat-saved">6.4 hrs</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN THREE-PANEL DASHBOARD -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[calc(100vh-8.5rem)]">
+
+        <!-- LEFT PANEL: CONTROLS & FILTERS (3 Cols) -->
+        <aside class="lg:col-span-3 border-r border-slate-800 bg-slate-900/60 p-4 overflow-y-auto space-y-6">
+            <div>
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Category Filters</span>
+                </h2>
+                <div class="space-y-1.5" id="category-filters">
+                    <button data-filter="ALL" class="filter-btn active w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+                        <span class="flex items-center space-x-2"><i data-lucide="layers" class="w-3.5 h-3.5"></i><span>All Messages</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 font-mono text-[10px]" id="count-all">5</span>
+                    </button>
+                    <button data-filter="Lead/Sales" class="filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="badge-dollar-sign" class="w-3.5 h-3.5 text-emerald-400"></i><span>Sales & Leads</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-lead">2</span>
+                    </button>
+                    <button data-filter="Support Issue" class="filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="life-buoy" class="w-3.5 h-3.5 text-rose-400"></i><span>Support Issues</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-support">1</span>
+                    </button>
+                    <button data-filter="Billing/Invoice" class="filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="credit-card" class="w-3.5 h-3.5 text-amber-400"></i><span>Billing & Invoices</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-billing">1</span>
+                    </button>
+                    <button data-filter="Partnership" class="filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="handshake" class="w-3.5 h-3.5 text-purple-400"></i><span>Partnerships</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-partner">1</span>
+                    </button>
+                    <button data-filter="Spam/Low Priority" class="filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="shield-alert" class="w-3.5 h-3.5 text-slate-400"></i><span>Spam / Low Priority</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-spam">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Autonomous Controls Switch Board -->
+            <div class="space-y-4">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Agent Automation Rules</span>
+                </h2>
+
+                <div class="glass-card rounded-xl p-3.5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">Auto CRM Sync</p>
+                            <p class="text-[10px] text-slate-400">HubSpot & Salesforce</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer" id="toggle-crm">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">Auto-Draft Replies</p>
+                            <p class="text-[10px] text-slate-400">Generate context drafts</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer" id="toggle-draft">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">Auto-Send High Confidence</p>
+                            <p class="text-[10px] text-slate-400">Confidence > 95%</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" id="toggle-autosend">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Processing Speed Slider -->
+                <div class="glass-card rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-200">AI Throttle / Speed</span>
+                        <span class="font-mono text-indigo-400 font-medium" id="speed-label">Real-time (0.4s)</span>
+                    </div>
+                    <input type="range" min="1" max="5" value="1" id="speed-slider" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                        <span>Fast</span>
+                        <span>Balanced</span>
+                        <span>Deep Think</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MIDDLE PANEL: EMAIL QUEUE FEED (4 Cols) -->
+        <section class="lg:col-span-4 border-r border-slate-800 bg-slate-900/30 flex flex-col h-full overflow-hidden">
+            <!-- Queue Header -->
+            <div class="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                <div class="flex items-center space-x-2">
+                    <h2 class="text-sm font-semibold text-white">Live Email Stream</h2>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" id="queue-status-pill">Active Feed</span>
+                </div>
+                <div class="relative w-36">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+                    <input type="text" id="email-search" placeholder="Search mail..." class="w-full bg-slate-950 text-xs text-slate-200 pl-8 pr-2 py-1 rounded-md border border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+            </div>
+
+            <!-- Email List Scroll Area -->
+            <div class="flex-1 overflow-y-auto divide-y divide-slate-800/60" id="email-list-container">
+                <!-- Email Cards dynamically generated here -->
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: WORKSPACE & AI COPILOT (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col h-full bg-slate-950 overflow-y-auto" id="workspace-container">
+            <!-- Selected Email Header & Content -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/40 space-y-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold" id="detail-category-badge">--</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700" id="detail-priority-badge">--</span>
+                        </div>
+                        <h2 class="text-lg font-bold text-white leading-snug" id="detail-subject">Select an email to triage</h2>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <button onclick="retriageCurrentEmail()" title="Re-analyze Email with AI" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors text-xs flex items-center space-x-1">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i>
+                            <span class="hidden sm:inline">Re-Triage</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sender Info -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center font-bold text-white text-xs" id="detail-avatar">
+                            --
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-200" id="detail-sender-name">--</p>
+                            <p class="text-slate-400 font-mono text-[11px]" id="detail-sender-email">--</p>
+                        </div>
+                    </div>
+                    <span class="text-slate-400 text-[11px]" id="detail-timestamp">--</span>
+                </div>
+
+                <!-- Body Snippet -->
+                <div class="bg-slate-900/90 rounded-xl p-3.5 border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans max-h-40 overflow-y-auto whitespace-pre-line" id="detail-body">
+                    Select an email from the left feed to preview full content, AI extracted insights, CRM sync state, and auto-generated reply draft.
+                </div>
+            </div>
+
+            <!-- AI Insights Extracted Entity Panel -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/20 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center space-x-1.5">
+                        <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-400"></i>
+                        <span>AI Triage Insights & Extracted Entities</span>
+                    </h3>
+                    <span class="text-[10px] font-mono text-slate-400" id="detail-confidence">Confidence: --</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Intent</span>
+                        <span class="text-xs font-semibold text-emerald-400 truncate block" id="entity-intent">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Sentiment</span>
+                        <span class="text-xs font-semibold text-blue-400 truncate block" id="entity-sentiment">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Est. Deal Value</span>
+                        <span class="text-xs font-semibold text-amber-300 truncate font-mono block" id="entity-value">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Company / Org</span>
+                        <span class="text-xs font-semibold text-purple-300 truncate block" id="entity-org">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CRM INTEGRATION CARD -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/30">
+                <div class="glass-card rounded-xl p-3.5 border border-indigo-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                            <i data-lucide="database" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-white" id="crm-name">HubSpot CRM Integration</span>
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="crm-status font-medium">MATCH FOUND</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400" id="crm-detail-text">Contact & Deal Record #HS-88492 updated</p>
+                        </div>
+                    </div>
+                    <button onclick="syncCRMNow()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-all flex items-center space-x-1.5 whitespace-nowrap">
+                        <i data-lucide="refresh-cw" class="w-3 h-3 text-emerald-400" id="crm-sync-icon"></i>
+                        <span id="crm-btn-text">Sync Record</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI DRAFTED REPLY WORKSPACE -->
+            <div class="p-4 flex-1 flex flex-col space-y-3 bg-slate-950">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label class="text-xs font-semibold text-slate-200 flex items-center space-x-1.5">
+                        <i data-lucide="pen-tool" class="w-3.5 h-3.5 text-violet-400"></i>
+                        <span>AI Drafted Response</span>
+                    </label>
+
+                    <!-- Tone Switchers -->
+                    <div class="flex items-center space-x-1 bg-slate-900 p-1 rounded-lg border border-slate-800" id="tone-selector">
+                        <button data-tone="Professional" class="tone-btn active px-2.5 py-1 rounded text-[10px] font-medium bg-indigo-600 text-white transition-all">Professional</button>
+                        <button data-tone="Friendly" class="tone-btn px-2.5 py-1 rounded text-[10px] font-medium text-slate-400 hover:text-white transition-all">Friendly</button>
+                        <button data-tone="Concise" class="tone-btn px-2.5 py-1 rounded text-[10px] font-medium text-slate-400 hover:text-white transition-all">Concise</button>
+                        <button data-tone="Firm" class="tone-btn px-2.5 py-1 rounded text-[10px] font-medium text-slate-400 hover:text-white transition-all">Firm</button>
+                    </div>
+                </div>
+
+                <!-- Textarea Editor -->
+                <div class="relative flex-1 min-h-[140px]">
+                    <textarea id="reply-draft-text" class="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-200 font-sans focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 resize-none leading-relaxed" placeholder="Draft will generate here..."></textarea>
+                    
+                    <!-- AI Status overlay while regenerating -->
+                    <div id="draft-loading-overlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-xl flex items-center justify-center space-x-2">
+                        <i data-lucide="loader-2" class="w-5 h-5 text-indigo-400 animate-spin"></i>
+                        <span class="text-xs font-mono text-indigo-300">AI Rewriting draft...</span>
+                    </div>
+                </div>
+
+                <!-- Prompt Tweaker Input & Approve Buttons -->
+                <div class="pt-1 space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="relative flex-1">
+                            <i data-lucide="wand-2" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-violet-400"></i>
+                            <input type="text" id="prompt-tweak" placeholder="Custom instructions (e.g. 'Offer 15% discount', 'Ask for meeting tomorrow')..." class="w-full bg-slate-900 text-xs text-slate-200 pl-8 pr-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-violet-500">
+                        </div>
+                        <button onclick="applyCustomPrompt()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium rounded-lg border border-slate-700 transition-colors">
+                            Refine
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-3 pt-2">
+                        <button onclick="discardDraft()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">
+                            Discard
+                        </button>
+                        <button onclick="approveAndSend()" class="flex items-center space-x-2 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-glow-sm transition-all active:scale-95">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>Approve & Send Draft</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Sample Email Data Array
+        let emailsData = [
+            {
+                id: "msg-101",
+                sender: "Sarah Jenkins",
+                email: "s.jenkins@enterprise-tech.io",
+                company: "EnterpriseTech Solutions",
+                avatar: "SJ",
+                subject: "Enterprise License Upgrade Quote Request & Procurement Details",
+                category: "Lead/Sales",
+                priority: "High Priority",
+                sentiment: "High Purchasing Intent",
+                dealValue: "$45,000 / yr",
+                intent: "Demo & Quote Request",
+                timestamp: "10 min ago",
+                confidence: "98%",
+                body: "Hi Team,\n\nWe are looking to expand our current deployment to 500 seats across our European operations. Could you provide an updated enterprise quote and let us know if custom SSO integration is included?\n\nWe need to finalize budget approval by Friday.\n\nBest,\nSarah Jenkins\nVP Infrastructure",
+                crmStatus: "HubSpot Deal Created",
+                crmDetail: "Mapped to Account #HS-9941 (Enterprise Deal)",
+                replies: {
+                    Professional: "Hello Sarah,\n\nThank you for reaching out! We would be delighted to assist with your 500-seat European rollout. Custom SSO integration is fully included in our Enterprise tier.\n\nI have attached our updated pricing matrix for your procurement team. Let me know if you'd like to schedule a quick 15-minute sync before Friday.\n\nBest regards,\nNexus AI Agent (on behalf of Sales)",
+                    Friendly: "Hi Sarah!\n\nAwesome news! We'd love to help scale your deployment to 500 seats. Yes, custom SSO is completely included!\n\nI've generated your custom quote and attached it here. Let me know when suits for a quick chat before your Friday deadline!\n\nCheers,\nNexus AI Agent",
+                    Concise: "Hi Sarah,\n\nYes, SSO is included for Enterprise 500 seats. Quote attached ($45,000/yr). Available for a call anytime today or tomorrow before your Friday deadline.\n\nBest,\nNexus AI Agent",
+                    Firm: "Dear Sarah,\n\nPlease find the official Enterprise quote for 500 seats attached. As requested, SSO is included under standard terms. Let us know if we can secure signatures before Friday.\n\nRegards,\nNexus AI Agent"
+                },
+                currentTone: "Professional",
+                processedStatus: "Draft Ready"
+            },
+            {
+                id: "msg-102",
+                sender: "Marcus Vance",
+                email: "marcus@fintech-pulse.com",
+                company: "FintechPulse",
+                avatar: "MV",
+                subject: "URGENT: API Gateway Returning 502 Errors on Webhooks",
+                category: "Support Issue",
+                priority: "Urgent",
+                sentiment: "Frustrated / Critical",
+                dealValue: "$12,500 / yr",
+                intent: "Technical Bug Report",
+                timestamp: "24 min ago",
+                confidence: "96%",
+                body: "Hello Support,\n\nSince 08:00 UTC today, all our webhook events are failing with 502 Bad Gateway response codes. Our production workflow is stalled.\n\nPlease escalate this to engineering immediately!\n\nMarcus Vance",
+                crmStatus: "Salesforce Ticket Logged",
+                crmDetail: "High Severity Ticket #SF-4091 Created",
+                replies: {
+                    Professional: "Hi Marcus,\n\nOur DevOps engineering team has been automatically alerted and is actively investigating the 502 Gateway issue on our US-East webhook node.\n\nWe will update you within 20 minutes on progress. You can also monitor status at status.nexus.io.\n\nSincerely,\nNexus Technical Support Agent",
+                    Friendly: "Hi Marcus,\n\nSo sorry for the disruption! Our engineers are already on it—we detected a transient cluster issue on US-East. Hold tight, we'll have an update for you in under 20 mins!\n\nBest,\nNexus Support",
+                    Concise: "Hi Marcus,\n\nEngineers are currently patching the US-East webhook gateway. ETA to resolution is 15-20 minutes. Status: status.nexus.io.\n\nThanks,\nNexus Support",
+                    Firm: "Marcus,\n\nThe issue has been escalated to Tier-3 Support. Operations are actively restoring node availability. We will reply as soon as services normalize.\n\nRegards,\nNexus Support"
+                },
+                currentTone: "Professional",
+                processedStatus: "CRM Updated"
+            },
+            {
+                id: "msg-103",
+                sender: "Elena Rostova",
+                email: "elena@globalinbound.org",
+                company: "GlobalInbound",
+                avatar: "ER",
+                subject: "Updated Invoice #INV-2026-88 Payment Confirmation Needed",
+                category: "Billing/Invoice",
+                priority: "Medium Priority",
+                sentiment: "Neutral / Transactional",
+                dealValue: "$3,200",
+                intent: "Billing Query",
+                timestamp: "1 hour ago",
+                confidence: "94%",
+                body: "Hi Accounts Team,\n\nWe processed wire transfer for Invoice #INV-2026-88 yesterday afternoon. Could you confirm receipt and send the updated tax receipt for our records?\n\nThanks,\nElena Rostova",
+                crmStatus: "HubSpot Billing Synced",
+                crmDetail: "Payment Ledger Ref #HS-PAY-302",
+                replies: {
+                    Professional: "Hi Elena,\n\nThank you for confirming your wire payment for Invoice #INV-2026-88. We have verified receipt with accounting and attached your tax receipt.\n\nHave a great week!\n\nBest regards,\nNexus Accounts Agent",
+                    Friendly: "Hi Elena!\n\nGot it! We've received the wire transfer. Attached is your official tax receipt for #INV-2026-88.\n\nThanks for being awesome!\nNexus Accounts Team",
+                    Concise: "Hi Elena,\n\nPayment received for #INV-2026-88. Tax receipt is attached.\n\nBest,\nNexus Accounts",
+                    Firm: "Elena,\n\nWire receipt confirmed. Tax invoice attached for your records.\n\nRegards,\nNexus Accounts"
+                },
+                currentTone: "Professional",
+                processedStatus: "Draft Ready"
+            },
+            {
+                id: "msg-104",
+                sender: "David Kim",
+                email: "dkim@ai-synergy.co",
+                company: "AI Synergy Ventures",
+                avatar: "DK",
+                subject: "Co-Marketing Webinar & Integration Partnership Proposal",
+                category: "Partnership",
+                priority: "Medium Priority",
+                sentiment: "Positive / Collaborative",
+                dealValue: "Co-Marketing",
+                intent: "Strategic Partnership",
+                timestamp: "3 hours ago",
+                confidence: "91%",
+                body: "Hi Team,\n\nLove what you are building with NexusTriage! We'd love to explore a joint co-marketing webinar in Q3 around Autonomous AI Workflows.\n\nAre you open to a introductory call next Tuesday?\n\nBest,\nDavid Kim",
+                crmStatus: "HubSpot Lead Logged",
+                crmDetail: "Partner Prospect #HS-PART-11",
+                replies: {
+                    Professional: "Hi David,\n\nThank you for reaching out! We are definitely open to exploring co-marketing opportunities with AI Synergy Ventures.\n\nOur Partnerships Lead would be glad to connect next Tuesday. I've sent a calendar invite for 2:00 PM EST.\n\nBest regards,\nNexus Partnerships Agent",
+                    Friendly: "Hi David!\n\nThanks for the kind words! A Q3 joint webinar sounds amazing. Let's definitely chat next Tuesday.\n\nI'll get our team to drop a calendar invite your way right now!\n\nCheers,\nNexus Team",
+                    Concise: "Hi David,\n\nWe'd love to connect regarding the Q3 co-marketing webinar. Invite sent for next Tuesday at 2 PM EST.\n\nBest,\nNexus Partner Team",
+                    Firm: "Dear David,\n\nWe accept your proposal to discuss joint marketing. A calendar hold has been placed for next Tuesday afternoon.\n\nRegards,\nNexus Team"
+                },
+                currentTone: "Professional",
+                processedStatus: "Draft Ready"
+            },
+            {
+                id: "msg-105",
+                sender: "SEO Growth Boost",
+                email: "no-reply@lead-gen-rocket.xyz",
+                company: "Unknown",
+                avatar: "SG",
+                subject: "Guaranteed 10x Organic Google Rankings in 30 Days!",
+                category: "Spam/Low Priority",
+                priority: "Low Priority",
+                sentiment: "Unsolicited Pitch",
+                dealValue: "$0",
+                intent: "Cold Spam",
+                timestamp: "5 hours ago",
+                confidence: "99%",
+                body: "Dear Business Owner,\n\nWe can rank your website #1 on Google guaranteed! Low price starting at $99/mo. Reply back to get instant traffic today!",
+                crmStatus: "Auto-Filtered",
+                crmDetail: "No CRM Record Created (Spam Score 99)",
+                replies: {
+                    Professional: "[Auto-Archive Triggered] No reply necessary.",
+                    Friendly: "[Auto-Archive Triggered] No reply necessary.",
+                    Concise: "[Auto-Archive Triggered] No reply necessary.",
+                    Firm: "[Auto-Archive Triggered] No reply necessary."
+                },
+                currentTone: "Professional",
+                processedStatus: "Auto-Archived"
+            }
+        ];
+
+        let selectedEmailId = "msg-101";
+        let activeCategoryFilter = "ALL";
+        let stats = {
+            processed: 142,
+            priority: 3,
+            drafted: 18,
+            crm: 98.4,
+            savedHours: 6.4
+        };
+
+        // Initialize App UI
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderEmailList();
+            renderEmailDetail(selectedEmailId);
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Category Filter Buttons
+            document.querySelectorAll('#category-filters .filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('#category-filters .filter-btn').forEach(b => {
+                        b.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30');
+                        b.classList.add('text-slate-300', 'hover:bg-slate-800/60', 'border-transparent');
+                    });
+                    
+                    const target = e.currentTarget;
+                    target.classList.remove('text-slate-300', 'hover:bg-slate-800/60', 'border-transparent');
+                    target.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30');
+
+                    activeCategoryFilter = target.getAttribute('data-filter');
+                    renderEmailList();
+                });
+            });
+
+            // Tone Switcher Buttons
+            document.querySelectorAll('#tone-selector .tone-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('#tone-selector .tone-btn').forEach(b => {
+                        b.classList.remove('bg-indigo-600', 'text-white');
+                        b.classList.add('text-slate-400', 'hover:text-white');
+                    });
+                    
+                    const target = e.currentTarget;
+                    target.classList.remove('text-slate-400', 'hover:text-white');
+                    target.classList.add('bg-indigo-600', 'text-white');
+
+                    const newTone = target.getAttribute('data-tone');
+                    changeDraftTone(newTone);
+                });
+            });
+
+            // Search Filter Input
+            document.getElementById('email-search').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                renderEmailList(query);
+            });
+
+            // Speed Slider Feedback
+            document.getElementById('speed-slider').addEventListener('input', (e) => {
+                const val = e.target.value;
+                const label = document.getElementById('speed-label');
+                if (val == 1) label.innerText = "Real-time (0.4s)";
+                else if (val == 2) label.innerText = "Fast (1.2s)";
+                else if (val == 3) label.innerText = "Balanced (2.5s)";
+                else if (val == 4) label.innerText = "Thorough (4.0s)";
+                else label.innerText = "Deep Reasoning (8s)";
+            });
+        }
+
+        function renderEmailList(searchQuery = "") {
+            const container = document.getElementById('email-list-container');
+            container.innerHTML = "";
+
+            const filtered = emailsData.filter(item => {
+                const matchesCategory = (activeCategoryFilter === "ALL") || (item.category === activeCategoryFilter);
+                const matchesSearch = item.subject.toLowerCase().includes(searchQuery) || 
+                                      item.sender.toLowerCase().includes(searchQuery) ||
+                                      item.company.toLowerCase().includes(searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-500">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 stroke-[1.5]"></i>
+                        <p class="text-xs">No emails found matching filters</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isSelected = item.id === selectedEmailId;
+                const card = document.createElement('div');
+                card.className = `p-3.5 cursor-pointer transition-all duration-150 border-l-2 ${
+                    isSelected 
+                        ? 'bg-slate-800/80 border-indigo-500 shadow-inner' 
+                        : 'hover:bg-slate-800/30 border-transparent'
+                }`;
+
+                // Color tags based on category
+                let categoryBg = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                if (item.category === "Support Issue") categoryBg = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                if (item.category === "Billing/Invoice") categoryBg = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                if (item.category === "Partnership") categoryBg = "bg-purple-500/10 text-purple-400 border-purple-500/20";
+                if (item.category === "Spam/Low Priority") categoryBg = "bg-slate-800 text-slate-400 border-slate-700";
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-semibold text-slate-200 truncate max-w-[130px]">${escapeHtml(item.sender)}</span>
+                            <span class="text-[10px] text-slate-400">(${escapeHtml(item.company)})</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-slate-400">${item.timestamp}</span>
+                    </div>
+
+                    <h4 class="text-xs font-medium text-slate-100 mb-2 line-clamp-1">${escapeHtml(item.subject)}</h4>
+
+                    <div class="flex items-center justify-between text-[10px]">
+                        <span class="px-2 py-0.5 rounded border ${categoryBg} font-mono">${item.category}</span>
+                        <div class="flex items-center space-x-1">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-indigo-400"></i>
+                            <span class="text-slate-400 font-mono">${item.processedStatus}</span>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    selectedEmailId = item.id;
+                    renderEmailList(searchQuery);
+                    renderEmailDetail(item.id);
+                });
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+            updateCounts();
+        }
+
+        function renderEmailDetail(emailId) {
+            const item = emailsData.find(e => e.id === emailId);
+            if (!item) return;
+
+            document.getElementById('detail-subject').innerText = item.subject;
+            document.getElementById('detail-sender-name').innerText = item.sender;
+            document.getElementById('detail-sender-email').innerText = item.email;
+            document.getElementById('detail-timestamp').innerText = item.timestamp;
+            document.getElementById('detail-avatar').innerText = item.avatar;
+            document.getElementById('detail-body').innerText = item.body;
+
+            // Badges
+            const catBadge = document.getElementById('detail-category-badge');
+            catBadge.innerText = item.category;
+            catBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border " + 
+                (item.category === 'Lead/Sales' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                 item.category === 'Support Issue' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                 item.category === 'Billing/Invoice' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20');
+
+            document.getElementById('detail-priority-badge').innerText = item.priority;
+            document.getElementById('detail-confidence').innerText = "AI Confidence: " + item.confidence;
+
+            // Entities
+            document.getElementById('entity-intent').innerText = item.intent;
+            document.getElementById('entity-sentiment').innerText = item.sentiment;
+            document.getElementById('entity-value').innerText = item.dealValue;
+            document.getElementById('entity-org').innerText = item.company;
+
+            // CRM Card
+            document.getElementById('crm-name').innerText = item.crmStatus;
+            document.getElementById('crm-detail-text').innerText = item.crmDetail;
+
+            // Draft Area
+            const draftTextarea = document.getElementById('reply-draft-text');
+            const currentTone = item.currentTone || "Professional";
+            draftTextarea.value = item.replies[currentTone] || item.replies["Professional"];
+
+            // Update tone selector active UI
+            document.querySelectorAll('#tone-selector .tone-btn').forEach(btn => {
+                if (btn.getAttribute('data-tone') === currentTone) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+        }
+
+        function changeDraftTone(tone) {
+            const item = emailsData.find(e => e.id === selectedEmailId);
+            if (!item) return;
+
+            item.currentTone = tone;
+            const overlay = document.getElementById('draft-loading-overlay');
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('reply-draft-text').value = item.replies[tone] || item.replies["Professional"];
+                overlay.classList.add('hidden');
+                showToast(`Switched reply tone to ${tone}`, "info");
+            }, 300);
+        }
+
+        function applyCustomPrompt() {
+            const promptInput = document.getElementById('prompt-tweak');
+            const text = promptInput.value.trim();
+            if (!text) return;
+
+            const overlay = document.getElementById('draft-loading-overlay');
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                const draftTextarea = document.getElementById('reply-draft-text');
+                draftTextarea.value = draftTextarea.value + `\n\n[P.S. Added custom directive: "${text}"]`;
+                overlay.classList.add('hidden');
+                promptInput.value = "";
+                showToast("Applied custom prompt tweaks to draft!", "success");
+            }, 500);
+        }
+
+        function retriageCurrentEmail() {
+            const overlay = document.getElementById('draft-loading-overlay');
+            overlay.classList.remove('hidden');
+            
+            showToast("Agent re-evaluating context & entities...", "info");
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                showToast("Re-triage completed successfully!", "success");
+            }, 800);
+        }
+
+        function syncCRMNow() {
+            const icon = document.getElementById('crm-sync-icon');
+            icon.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                stats.crm = Math.min(100, (parseFloat(stats.crm) + 0.1)).toFixed(1);
+                document.getElementById('stat-crm').innerText = stats.crm + "%";
+                showToast("HubSpot & Salesforce records synchronized!", "success");
+            }, 600);
+        }
+
+        function approveAndSend() {
+            const itemIndex = emailsData.findIndex(e => e.id === selectedEmailId);
+            if (itemIndex === -1) return;
+
+            const sentItem = emailsData[itemIndex];
+            emailsData.splice(itemIndex, 1);
+
+            // Update stats
+            stats.processed += 1;
+            stats.savedHours = (parseFloat(stats.savedHours) + 0.2).toFixed(1);
+            
+            document.getElementById('stat-processed').innerText = stats.processed;
+            document.getElementById('stat-saved').innerText = stats.savedHours + " hrs";
+
+            showToast(`Reply sent to ${sentItem.sender} & CRM log saved!`, "success");
+
+            // Select next email if available
+            if (emailsData.length > 0) {
+                selectedEmailId = emailsData[0].id;
+                renderEmailList();
+                renderEmailDetail(selectedEmailId);
+            } else {
+                renderEmailList();
+                document.getElementById('detail-subject').innerText = "All incoming emails processed!";
+                document.getElementById('detail-body').innerText = "Your autonomous triage queue is clear.";
+            }
+        }
+
+        function discardDraft() {
+            showToast("Draft discarded", "warning");
+        }
+
+        function triggerSimulateEmail() {
+            const pool = [
+                {
+                    name: "Alex Rivera",
+                    email: "a.rivera@fintech-cloud.com",
+                    company: "FintechCloud",
+                    avatar: "AR",
+                    subject: "Demanded API SLA & Custom Security Audit Questionnaire",
+                    category: "Lead/Sales",
+                    priority: "High Priority",
+                    sentiment: "High Intent",
+                    dealValue: "$28,000 / yr",
+                    intent: "Security Vendor Audit",
+                    body: "Hello Nexus Team,\n\nWe are in final stages of vendor evaluation. Attached is our SOC2 & ISO security audit form. Please return before end of week.\n\nAlex",
+                    crmStatus: "Salesforce Lead Logged",
+                    crmDetail: "Security Compliance Track #SF-9011"
+                },
+                {
+                    name: "Chloe Bennett",
+                    email: "c.bennett@design-studio.co",
+                    company: "Studio Labs",
+                    avatar: "CB",
+                    subject: "Billing Dispute: Double Charge on Monthly Subscription",
+                    category: "Billing/Invoice",
+                    priority: "High Priority",
+                    sentiment: "Concerned",
+                    dealValue: "$490",
+                    intent: "Refund Request",
+                    body: "Hi Support,\n\nI noticed two charges of $245 on my credit card statement today for order #INV-883. Could you check and issue a refund for the duplicate?\n\nThanks,\nChloe",
+                    crmStatus: "HubSpot Ticket Created",
+                    crmDetail: "Refund Request #HS-REF-109"
+                }
+            ];
+
+            const template = pool[Math.floor(Math.random() * pool.length)];
+            const newId = "msg-" + Math.floor(1000 + Math.random() * 9000);
+
+            const newMail = {
+                id: newId,
+                sender: template.name,
+                email: template.email,
+                company: template.company,
+                avatar: template.avatar,
+                subject: template.subject,
+                category: template.category,
+                priority: template.priority,
+                sentiment: template.sentiment,
+                dealValue: template.dealValue,
+                intent: template.intent,
+                timestamp: "Just now",
+                confidence: "97%",
+                body: template.body,
+                crmStatus: template.crmStatus,
+                crmDetail: template.crmDetail,
+                replies: {
+                    Professional: `Hello ${template.name},\n\nThank you for reaching out! Autonomous AI has ingested your request and notified our team. We are currently addressing your request regarding "${template.subject}".\n\nBest regards,\nNexus AI Agent`,
+                    Friendly: `Hi ${template.name}!\n\nGot your email! We are right on top of this and will have an update for you shortly.\n\nCheers,\nNexus Agent`,
+                    Concise: `Hi ${template.name},\n\nRequest received and processing now under priority queue.\n\nBest,\nNexus Agent`,
+                    Firm: `Dear ${template.name},\n\nYour communication has been logged into our agent queue and assigned for processing.\n\nRegards,\nNexus Agent`
+                },
+                currentTone: "Professional",
+                processedStatus: "Draft Ready"
+            };
+
+            emailsData.unshift(newMail);
+            selectedEmailId = newMail.id;
+            renderEmailList();
+            renderEmailDetail(selectedEmailId);
+
+            showToast(`New email processed from ${template.name}!`, "info");
+        }
+
+        function updateCounts() {
+            document.getElementById('count-all').innerText = emailsData.length;
+            document.getElementById('count-lead').innerText = emailsData.filter(e => e.category === 'Lead/Sales').length;
+            document.getElementById('count-support').innerText = emailsData.filter(e => e.category === 'Support Issue').length;
+            document.getElementById('count-billing').innerText = emailsData.filter(e => e.category === 'Billing/Invoice').length;
+            document.getElementById('count-partner').innerText = emailsData.filter(e => e.category === 'Partnership').length;
+            document.getElementById('count-spam').innerText = emailsData.filter(e => e.category === 'Spam/Low Priority').length;
+        }
+
+        // Helper Toast Generator
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let icon = "info";
+            let borderColor = "border-indigo-500/40";
+            let bg = "bg-slate-900/90";
+
+            if (type === "success") {
+                icon = "check-circle-2";
+                borderColor = "border-emerald-500/40";
+            } else if (type === "warning") {
+                icon = "alert-triangle";
+                borderColor = "border-amber-500/40";
+            }
+
+            toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl border ${borderColor} ${bg} text-slate-100 text-xs shadow-glow-sm backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-4 h-4 ${type === 'success' ? 'text-emerald-400' : type === 'warning' ? 'text-amber-400' : 'text-indigo-400'}"></i>
+                <span class="font-medium">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
