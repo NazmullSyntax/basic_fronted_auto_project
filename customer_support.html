@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Customer Support Ticket Router</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            glow: '#6366f1',
+                        },
+                        dark: {
+                            base: '#070b14',
+                            surface: '#0d1527',
+                            card: '#152035',
+                            border: '#223252',
+                        }
+                    },
+                    boxShadow: {
+                        'glow-sm': '0 0 15px -3px rgba(99, 102, 241, 0.35)',
+                        'glow-md': '0 0 25px -5px rgba(99, 102, 241, 0.45)',
+                        'glow-rose': '0 0 20px -4px rgba(244, 63, 94, 0.4)',
+                        'glow-emerald': '0 0 20px -4px rgba(16, 185, 129, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-panel {
+            background: rgba(13, 21, 39, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(21, 32, 53, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(7, 11, 20, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #223252;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334b7a;
+        }
+
+        /* Animations */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.08); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .ai-shimmer {
+            background: linear-gradient(90deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.25) 50%, rgba(99,102,241,0.1) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased bg-dark-base text-slate-100 selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP HEADER BAR -->
+    <header class="h-16 border-b border-slate-800/80 bg-slate-900/90 glass-panel sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-cyan-500 flex items-center justify-center shadow-glow-sm">
+                <i data-lucide="route" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-200 bg-clip-text text-transparent">
+                        OmniRoute AI <span class="text-xs font-mono font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 ml-1">v3.8 Ticket Agent</span>
+                    </h1>
+                </div>
+                <p class="text-xs text-slate-400">Autonomous Support Ticket Classification & Routing Hub</p>
+            </div>
+        </div>
+
+        <!-- Global Action Controls & Status Indicator -->
+        <div class="flex items-center space-x-3">
+            <div class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-medium text-emerald-400" id="agent-status-text">AI Router Active (98.6% Precision)</span>
+            </div>
+
+            <button onclick="batchProcessQueue()" title="Automatically route high confidence pending tickets" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs transition-colors">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>Batch Route</span>
+            </button>
+
+            <button onclick="triggerSimulateTicket()" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs transition-all duration-200 shadow-glow-sm active:scale-95">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span>Simulate Ticket</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- METRICS SUMMARY BAR -->
+    <section class="border-b border-slate-800/80 bg-slate-900/40 px-4 md:px-6 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <i data-lucide="inbox" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Unrouted Queue</p>
+                <p class="text-lg font-bold text-white tracking-tight" id="stat-unrouted">6 Pending</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Critical SLA Risk</p>
+                <p class="text-lg font-bold text-rose-400 tracking-tight" id="stat-critical">2 Urgent</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <i data-lucide="target" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">AI Routing Accuracy</p>
+                <p class="text-lg font-bold text-emerald-400 tracking-tight" id="stat-accuracy">98.4%</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3">
+            <div class="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Auto-Route Efficiency</p>
+                <p class="text-lg font-bold text-cyan-300 tracking-tight" id="stat-efficiency">87.2%</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-3 flex items-center space-x-3 col-span-2 sm:col-span-1">
+            <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-medium text-slate-400">Avg Resolution Time</p>
+                <p class="text-lg font-bold text-amber-300 tracking-tight" id="stat-resolution">14m 20s</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN THREE-COLUMN WORKSPACE -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[calc(100vh-8.5rem)]">
+
+        <!-- LEFT PANEL: FILTERS & AGENT AUTOMATION (3 Cols) -->
+        <aside class="lg:col-span-3 border-r border-slate-800/80 bg-slate-900/60 p-4 overflow-y-auto space-y-6">
+            <!-- Department Filters -->
+            <div>
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                    <i data-lucide="building-2" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Target Department</span>
+                </h2>
+                <div class="space-y-1.5" id="dept-filters">
+                    <button data-filter="ALL" class="dept-filter-btn active w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+                        <span class="flex items-center space-x-2"><i data-lucide="layers" class="w-3.5 h-3.5"></i><span>All Departments</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 font-mono text-[10px]" id="count-all">6</span>
+                    </button>
+                    <button data-filter="Tech Support" class="dept-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="wrench" class="w-3.5 h-3.5 text-blue-400"></i><span>Tech Support</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-tech">2</span>
+                    </button>
+                    <button data-filter="Billing & Accounts" class="dept-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="credit-card" class="w-3.5 h-3.5 text-amber-400"></i><span>Billing & Accounts</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-billing">1</span>
+                    </button>
+                    <button data-filter="Product Engineering" class="dept-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="code-2" class="w-3.5 h-3.5 text-purple-400"></i><span>Product Engineering</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-eng">1</span>
+                    </button>
+                    <button data-filter="Sales & Renewal" class="dept-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-400"></i><span>Sales & Renewal</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-sales">1</span>
+                    </button>
+                    <button data-filter="Security & Compliance" class="dept-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-slate-300 hover:bg-slate-800/60 border border-transparent">
+                        <span class="flex items-center space-x-2"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-rose-400"></i><span>Security & Compliance</span></span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]" id="count-security">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Urgency Filters -->
+            <div>
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
+                    <span>Urgency Level</span>
+                </h2>
+                <div class="flex flex-wrap gap-1.5" id="urgency-filters">
+                    <button data-urgency="ALL" class="urgency-btn active px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-indigo-300 border border-indigo-500/30">All</button>
+                    <button data-urgency="Critical" class="urgency-btn px-2.5 py-1 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800">Critical</button>
+                    <button data-urgency="High" class="urgency-btn px-2.5 py-1 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:text-orange-400 border border-slate-800">High</button>
+                    <button data-urgency="Medium" class="urgency-btn px-2.5 py-1 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:text-amber-400 border border-slate-800">Medium</button>
+                    <button data-urgency="Low" class="urgency-btn px-2.5 py-1 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-800">Low</button>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Router Controls & Rules -->
+            <div class="space-y-4">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>AI Router Settings</span>
+                </h2>
+
+                <div class="glass-card rounded-xl p-3.5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">Auto-Dispatch Mode</p>
+                            <p class="text-[10px] text-slate-400">Route >90% Confidence</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer" id="toggle-autodispatch" onchange="toggleAutoDispatch(this)">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">Load-Balanced Routing</p>
+                            <p class="text-[10px] text-slate-400">Avoid agent overload</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer" id="toggle-loadbalance">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">VIP Client Escalation</p>
+                            <p class="text-[10px] text-slate-400">Bypass queue for Enterprise</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer" id="toggle-vip">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI Confidence Threshold -->
+                <div class="glass-card rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-200">Routing Threshold</span>
+                        <span class="font-mono text-indigo-400 font-medium" id="threshold-label">85% Score</span>
+                    </div>
+                    <input type="range" min="70" max="98" value="85" id="threshold-slider" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                        <span>70% (Aggressive)</span>
+                        <span>98% (Strict)</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MIDDLE PANEL: TICKET FEED (4 Cols) -->
+        <section class="lg:col-span-4 border-r border-slate-800/80 bg-slate-900/30 flex flex-col h-full overflow-hidden">
+            <!-- Queue Header & Search Bar -->
+            <div class="p-3.5 border-b border-slate-800/80 flex flex-col space-y-2 bg-slate-900/50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-sm font-semibold text-white">Live Ingestion Stream</h2>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" id="queue-status-pill">6 Unrouted</span>
+                    </div>
+                    
+                    <select id="sort-select" class="bg-slate-950 text-[11px] text-slate-300 border border-slate-800 rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500">
+                        <option value="urgency">Sort: Urgency</option>
+                        <option value="sla">Sort: SLA Time Left</option>
+                        <option value="newest">Sort: Newest First</option>
+                    </select>
+                </div>
+
+                <div class="relative w-full">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+                    <input type="text" id="ticket-search" placeholder="Search ticket #ID, customer, key terms..." class="w-full bg-slate-950 text-xs text-slate-200 pl-8 pr-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+            </div>
+
+            <!-- Ticket List Container -->
+            <div class="flex-1 overflow-y-auto divide-y divide-slate-800/60" id="ticket-list-container">
+                <!-- Ticket elements rendered via JavaScript -->
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: INSPECTION & ROUTING DECK (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col h-full bg-slate-950 overflow-y-auto" id="workspace-container">
+            <!-- Ticket Detail Header -->
+            <div class="p-4 border-b border-slate-800/80 bg-slate-900/40 space-y-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold" id="detail-urgency-badge">--</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700" id="detail-ticket-id">#TCK-0000</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20" id="detail-tier">VIP Tier</span>
+                        </div>
+                        <h2 class="text-lg font-bold text-white leading-snug" id="detail-subject">Select a ticket to inspect</h2>
+                    </div>
+
+                    <button onclick="escalatePriority()" title="Escalate Priority to Critical" class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition-colors text-xs flex items-center space-x-1">
+                        <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Escalate</span>
+                    </button>
+                </div>
+
+                <!-- Customer Metadata -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-700 to-violet-600 flex items-center justify-center font-bold text-white text-xs shadow-glow-sm" id="detail-avatar">
+                            --
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-200" id="detail-customer-name">--</p>
+                            <p class="text-slate-400 font-mono text-[11px]" id="detail-customer-email">--</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-400 text-[11px] block" id="detail-timestamp">--</span>
+                        <span class="text-slate-400 text-[10px] font-mono" id="detail-channel font-medium">Channel: Web Portal</span>
+                    </div>
+                </div>
+
+                <!-- Full Ticket Body -->
+                <div class="bg-slate-900/90 rounded-xl p-3.5 border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans max-h-40 overflow-y-auto whitespace-pre-line" id="detail-body">
+                    Select a support ticket from the middle stream to preview AI topic extraction, sentiment analysis, key risk factors, and destination agent workloads.
+                </div>
+            </div>
+
+            <!-- AI CLASSIFICATION BREAKDOWN -->
+            <div class="p-4 border-b border-slate-800/80 bg-slate-900/20 space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center space-x-1.5">
+                        <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-400"></i>
+                        <span>AI Classification & Risk Analysis</span>
+                    </h3>
+                    <span class="text-[11px] font-mono font-medium text-slate-300" id="detail-confidence">AI Confidence: --%</span>
+                </div>
+
+                <!-- Confidence Bar -->
+                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div id="confidence-bar" class="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+
+                <!-- Tag Clouds & Sentiment -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Sentiment</span>
+                        <span class="text-xs font-semibold text-emerald-400 truncate flex items-center space-x-1" id="entity-sentiment">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">SLA Countdown</span>
+                        <span class="text-xs font-semibold text-amber-400 font-mono truncate block" id="entity-sla">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Affected Service</span>
+                        <span class="text-xs font-semibold text-cyan-300 truncate block" id="entity-service">--</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block font-medium">Financial Risk</span>
+                        <span class="text-xs font-semibold text-rose-400 font-mono truncate block" id="entity-risk">--</span>
+                    </div>
+                </div>
+
+                <!-- Risk Factors Tag Cloud -->
+                <div class="flex items-center space-x-2 pt-1">
+                    <span class="text-[10px] font-mono text-slate-400">Detected Signals:</span>
+                    <div class="flex flex-wrap gap-1" id="risk-tags-container">
+                        <!-- Dynamic Tags -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMART ROUTING DESTINATION DECK -->
+            <div class="p-4 border-b border-slate-800/80 bg-slate-900/40 space-y-3.5">
+                <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                    <i data-lucide="user-check" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Recommended Destination & Agent Assignment</span>
+                </h3>
+
+                <div class="glass-card rounded-xl p-3.5 border border-indigo-500/20 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block font-medium">Target Department</span>
+                            <span class="text-sm font-bold text-white" id="suggested-dept">--</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 block font-medium">Auto-Route Recommendation</span>
+                            <span class="text-xs font-mono font-semibold text-indigo-300" id="routing-reason">Highest Match (Priority Rule)</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200 text-xs" id="agent-avatar">
+                                --
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-100" id="suggested-agent-name">--</p>
+                                <p class="text-[10px] text-slate-400" id="suggested-agent-role">--</p>
+                            </div>
+                        </div>
+
+                        <!-- Workload Meter -->
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 block">Agent Active Workload</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-20 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="workload-bar" class="h-full bg-emerald-500" style="width: 40%"></div>
+                                </div>
+                                <span class="text-[11px] font-mono font-medium text-emerald-400" id="workload-text">2 / 5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI RECOMMENDED ACTION / MACRO SOLUTION -->
+            <div class="p-4 flex-1 flex flex-col space-y-3 bg-slate-950">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-slate-200 flex items-center space-x-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-violet-400"></i>
+                        <span>AI Suggested Auto-Response / Quick Macro</span>
+                    </label>
+
+                    <button onclick="regenerateMacro()" class="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center space-x-1">
+                        <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                        <span>Regenerate Response</span>
+                    </button>
+                </div>
+
+                <!-- Macro Response Area -->
+                <div class="relative flex-1 min-h-[120px]">
+                    <textarea id="macro-response-text" class="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-sans focus:outline-none focus:border-indigo-500/60 resize-none leading-relaxed" placeholder="Macro draft solution..."></textarea>
+                    
+                    <div id="macro-loading-overlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-xl flex items-center justify-center space-x-2">
+                        <i data-lucide="loader-2" class="w-5 h-5 text-indigo-400 animate-spin"></i>
+                        <span class="text-xs font-mono text-indigo-300">Generating contextual solution...</span>
+                    </div>
+                </div>
+
+                <!-- Dispatch Action Buttons & Manual Reroute -->
+                <div class="pt-2 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-slate-400">Manual Override:</span>
+                        <select id="reroute-select" onchange="manualReroute(this.value)" class="bg-slate-900 text-xs text-slate-200 border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+                            <option value="" disabled selected>Select Department...</option>
+                            <option value="Tech Support">Tech Support</option>
+                            <option value="Billing & Accounts">Billing & Accounts</option>
+                            <option value="Product Engineering">Product Engineering</option>
+                            <option value="Sales & Renewal">Sales & Renewal</option>
+                            <option value="Security & Compliance">Security & Compliance</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button onclick="approveAndRoute()" class="flex items-center space-x-2 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-glow-emerald transition-all active:scale-95">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>Approve & Route Ticket</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Data Store for Tickets
+        let ticketsData = [
+            {
+                id: "TCK-8921",
+                customer: "Alex Morgan",
+                email: "a.morgan@stripe-gate.com",
+                avatar: "AM",
+                tier: "Enterprise VIP",
+                subject: "CRITICAL: Database connection pool latency spiking above 4500ms in EU Cluster",
+                body: "Hello Support,\n\nOur automated telemetry flagged severe database connection timeouts on region eu-central-1 starting at 00:15 UTC. Over 40% of microservice requests are timing out.\n\nPlease escalate immediately to infrastructure engineers!",
+                channel: "API",
+                urgency: "Critical",
+                predictedDept: "Tech Support",
+                confidence: 97,
+                sentiment: "Highly Frustrated",
+                sentimentScore: "critical",
+                slaTime: "12m left",
+                affectedService: "EU-Central Database",
+                riskLevel: "High ($85k SLA breach)",
+                riskTags: ["Latency Spike", "DB Connection Leak", "Production Outage"],
+                suggestedAgent: "Marcus Vance",
+                agentRole: "Sr. Infrastructure Engineer",
+                agentAvatar: "MV",
+                workload: 4,
+                maxWorkload: 5,
+                macroResponse: "Hello Alex,\n\nWe have automatically detected the latency anomaly on eu-central-1 DB cluster node #4. Senior Infrastructure Engineer Marcus Vance has been assigned and is executing failover to secondary node.\n\nNext update: 10 minutes."
+            },
+            {
+                id: "TCK-8922",
+                customer: "Brenda Vance",
+                email: "brenda@cloud-deploy.io",
+                avatar: "BV",
+                tier: "Pro Tier",
+                subject: "Invoice #INV-2026-90 shows incorrect seat count tax calculations",
+                body: "Hi Billing team,\n\nOur monthly recurring invoice generated this morning charged VAT twice for 45 sub-accounts. The total discrepancy is approximately $1,240.00.\n\nCould you audit and issue a corrected invoice?",
+                channel: "Email",
+                urgency: "High",
+                predictedDept: "Billing & Accounts",
+                confidence: 95,
+                sentiment: "Concerned",
+                sentimentScore: "warning",
+                slaTime: "45m left",
+                affectedService: "Billing System",
+                riskLevel: "Medium ($1.2k overcharge)",
+                riskTags: ["Double Tax", "VAT Discrepancy", "Invoice Audit"],
+                suggestedAgent: "Elena Rostova",
+                agentRole: "Billing Specialist Lead",
+                agentAvatar: "ER",
+                workload: 2,
+                maxWorkload: 5,
+                macroResponse: "Hi Brenda,\n\nThank you for catching this. Our automated tax auditor flagged a transient VAT calculation issue for multi-seat subscriptions. Elena Rostova will void #INV-2026-90 and reissue the updated invoice with proper credit."
+            },
+            {
+                id: "TCK-8923",
+                customer: "Dr. Aris Thorne",
+                email: "thorne@bio-synth.org",
+                avatar: "AT",
+                tier: "Enterprise VIP",
+                subject: "SOC2 Compliance & Vendor Security Penetration Test Questionnaire",
+                body: "Dear Compliance Officer,\n\nWe are preparing for our annual Q3 security audit. We require your updated SOC2 Type II report and answers to our attached 40-point vendor security assessment by Friday.\n\nRegards,\nDr. Aris Thorne",
+                channel: "Web Portal",
+                urgency: "Medium",
+                predictedDept: "Security & Compliance",
+                confidence: 94,
+                sentiment: "Neutral / Formal",
+                sentimentScore: "neutral",
+                slaTime: "3h 20m left",
+                affectedService: "Compliance Portal",
+                riskLevel: "Low Risk",
+                riskTags: ["SOC2 Type II", "Security Questionnaire", "Annual Audit"],
+                suggestedAgent: "Sophia Chen",
+                agentRole: "Head of Information Security",
+                agentAvatar: "SC",
+                workload: 1,
+                maxWorkload: 5,
+                macroResponse: "Dear Dr. Thorne,\n\nOur SOC2 Type II compliance package and pre-filled standard ISO/CAIQ security questionnaire have been queued for secure download. Sophia Chen will verify your NDA status and release docs shortly."
+            },
+            {
+                id: "TCK-8924",
+                customer: "Jason Miller",
+                email: "jason@dev-flow.com",
+                avatar: "JM",
+                tier: "Growth Tier",
+                subject: "Feature Request: Support for GraphQL Subscriptions & WebSocket Triggers",
+                body: "Hey product team,\n\nWe are building a real-time dashboard and currently poll your REST endpoints every 2 seconds. Having native GraphQL Subscriptions or WebSockets would reduce API load by 90%.\n\nIs this on your public roadmap?",
+                channel: "Chat",
+                urgency: "Low",
+                predictedDept: "Product Engineering",
+                confidence: 91,
+                sentiment: "Positive / Enthusiastic",
+                sentimentScore: "positive",
+                slaTime: "8h left",
+                affectedService: "API Gateway",
+                riskLevel: "None",
+                riskTags: ["GraphQL", "WebSockets", "Feature Request"],
+                suggestedAgent: "David Kim",
+                agentRole: "Staff Product Architect",
+                agentAvatar: "DK",
+                workload: 3,
+                maxWorkload: 5,
+                macroResponse: "Hi Jason,\n\nGreat suggestion! GraphQL WebSocket subscriptions are currently in beta testing. We have added your account #ACC-402 to the early access preview list. David Kim will follow up with API access keys."
+            },
+            {
+                id: "TCK-8925",
+                customer: "Rachel Green",
+                email: "rachel@retail-omni.co",
+                avatar: "RG",
+                tier: "Enterprise VIP",
+                subject: "Annual Contract Renewal & Tier Upgrade Inquiry (1,500 Seats)",
+                body: "Hello Sales Team,\n\nOur contract expires next month. We are expanding our team by 500 seats and want to discuss custom enterprise pricing, SLA guarantees, and dedicated account management.\n\nCan we set up a call tomorrow?",
+                channel: "Email",
+                urgency: "High",
+                predictedDept: "Sales & Renewal",
+                confidence: 98,
+                sentiment: "High Buying Intent",
+                sentimentScore: "positive",
+                slaTime: "1h 10m left",
+                affectedService: "Enterprise Subscription",
+                riskLevel: "Opportunity ($120k ARR)",
+                riskTags: ["1500 Seats", "Contract Renewal", "VIP Upgrade"],
+                suggestedAgent: "Lucas Wright",
+                agentRole: "Enterprise Account Director",
+                agentAvatar: "LW",
+                workload: 2,
+                maxWorkload: 5,
+                macroResponse: "Hi Rachel,\n\nThank you for expanding with us! Lucas Wright has prepared your enterprise tier renewal proposal with 1,500 seat volume discount pricing. He will send a calendar invite for tomorrow morning."
+            },
+            {
+                id: "TCK-8926",
+                customer: "Klaus Schmidt",
+                email: "klaus@industrial-node.de",
+                avatar: "KS",
+                tier: "Pro Tier",
+                subject: "Webhook Signatures Failing Validation After Recent SDK Release (v3.4)",
+                body: "Hallo Support,\n\nAfter upgrading to SDK v3.4 today, HMAC-SHA256 signature verification fails for all incoming events. Rolling back to v3.3 resolves the issue instantly.\n\nCould engineering inspect the header payload formatting?",
+                channel: "API",
+                urgency: "High",
+                predictedDept: "Tech Support",
+                confidence: 96,
+                sentiment: "Frustrated / Technical",
+                sentimentScore: "warning",
+                slaTime: "30m left",
+                affectedService: "SDK v3.4 / Webhooks",
+                riskLevel: "Medium (SDK Bug)",
+                riskTags: ["HMAC Validation", "SDK v3.4 Regression", "Webhook Failure"],
+                suggestedAgent: "Marcus Vance",
+                agentRole: "Sr. Infrastructure Engineer",
+                agentAvatar: "MV",
+                workload: 4,
+                maxWorkload: 5,
+                macroResponse: "Hallo Klaus,\n\nThank you for the precise regression report. Our SDK team verified a header encoding discrepancy in v3.4. Marcus Vance has flagged patch v3.4.1 for release within 30 minutes."
+            }
+        ];
+
+        let selectedTicketId = "TCK-8921";
+        let activeDeptFilter = "ALL";
+        let activeUrgencyFilter = "ALL";
+        let autoDispatchEnabled = true;
+
+        let stats = {
+            unrouted: 6,
+            critical: 2,
+            accuracy: 98.4,
+            efficiency: 87.2,
+            resolution: "14m 20s"
+        };
+
+        // Initialize UI Events
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderTicketList();
+            renderTicketDetail(selectedTicketId);
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Department Filters
+            document.querySelectorAll('#dept-filters .dept-filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('#dept-filters .dept-filter-btn').forEach(b => {
+                        b.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30');
+                        b.classList.add('text-slate-300', 'hover:bg-slate-800/60', 'border-transparent');
+                    });
+                    
+                    const target = e.currentTarget;
+                    target.classList.remove('text-slate-300', 'hover:bg-slate-800/60', 'border-transparent');
+                    target.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border-indigo-500/30');
+
+                    activeDeptFilter = target.getAttribute('data-filter');
+                    renderTicketList();
+                });
+            });
+
+            // Urgency Filter Buttons
+            document.querySelectorAll('#urgency-filters .urgency-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('#urgency-filters .urgency-btn').forEach(b => {
+                        b.classList.remove('bg-slate-800', 'text-indigo-300', 'border-indigo-500/30');
+                        b.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+                    });
+                    
+                    const target = e.currentTarget;
+                    target.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+                    target.classList.add('bg-slate-800', 'text-indigo-300', 'border-indigo-500/30');
+
+                    activeUrgencyFilter = target.getAttribute('data-urgency');
+                    renderTicketList();
+                });
+            });
+
+            // Search Bar Input
+            document.getElementById('ticket-search').addEventListener('input', () => {
+                renderTicketList();
+            });
+
+            // Sort Select Option
+            document.getElementById('sort-select').addEventListener('change', () => {
+                renderTicketList();
+            });
+
+            // Threshold Slider
+            document.getElementById('threshold-slider').addEventListener('input', (e) => {
+                document.getElementById('threshold-label').innerText = `${e.target.value}% Score`;
+            });
+        }
+
+        function renderTicketList() {
+            const container = document.getElementById('ticket-list-container');
+            container.innerHTML = "";
+
+            const searchQuery = document.getElementById('ticket-search').value.toLowerCase();
+            const sortBy = document.getElementById('sort-select').value;
+
+            // Filter logic
+            let filtered = ticketsData.filter(item => {
+                const matchesDept = (activeDeptFilter === "ALL") || (item.predictedDept === activeDeptFilter);
+                const matchesUrgency = (activeUrgencyFilter === "ALL") || (item.urgency === activeUrgencyFilter);
+                const matchesSearch = item.subject.toLowerCase().includes(searchQuery) ||
+                                      item.customer.toLowerCase().includes(searchQuery) ||
+                                      item.id.toLowerCase().includes(searchQuery) ||
+                                      item.body.toLowerCase().includes(searchQuery);
+                return matchesDept && matchesUrgency && matchesSearch;
+            });
+
+            // Sorting logic
+            if (sortBy === "urgency") {
+                const order = { "Critical": 1, "High": 2, "Medium": 3, "Low": 4 };
+                filtered.sort((a, b) => order[a.urgency] - order[b.urgency]);
+            } else if (sortBy === "sla") {
+                filtered.sort((a, b) => a.slaTime.localeCompare(b.slaTime));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-500">
+                        <i data-lucide="inbox-check" class="w-8 h-8 mx-auto mb-2 stroke-[1.5]"></i>
+                        <p class="text-xs">No pending tickets matching filter active</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isSelected = item.id === selectedTicketId;
+                const card = document.createElement('div');
+                card.className = `p-3.5 cursor-pointer transition-all duration-150 border-l-2 ${
+                    isSelected 
+                        ? 'bg-slate-800/80 border-indigo-500 shadow-inner' 
+                        : 'hover:bg-slate-800/30 border-transparent'
+                }`;
+
+                // Urgency Colors
+                let urgencyBadge = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                if (item.urgency === "High") urgencyBadge = "bg-orange-500/10 text-orange-400 border-orange-500/20";
+                if (item.urgency === "Medium") urgencyBadge = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                if (item.urgency === "Low") urgencyBadge = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+
+                // Channel Icon
+                let channelIcon = "mail";
+                if (item.channel === "Web Portal") channelIcon = "globe";
+                if (item.channel === "Chat") channelIcon = "message-square";
+                if (item.channel === "API") channelIcon = "cpu";
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs font-mono font-bold text-slate-300">${item.id}</span>
+                            <span class="text-[10px] px-1.5 py-0.2 rounded font-mono border ${urgencyBadge}">${item.urgency}</span>
+                        </div>
+                        <div class="flex items-center space-x-1 text-[10px] font-mono text-amber-400">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            <span>${item.slaTime}</span>
+                        </div>
+                    </div>
+
+                    <h4 class="text-xs font-semibold text-slate-100 mb-1.5 line-clamp-1">${escapeHtml(item.subject)}</h4>
+
+                    <div class="flex items-center justify-between text-[10px]">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-slate-400 flex items-center space-x-1">
+                                <i data-lucide="${channelIcon}" class="w-3 h-3 text-slate-400"></i>
+                                <span>${escapeHtml(item.customer)}</span>
+                            </span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+                            ${item.predictedDept} (${item.confidence}%)
+                        </span>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    selectedTicketId = item.id;
+                    renderTicketList();
+                    renderTicketDetail(item.id);
+                });
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+            updateCounts();
+        }
+
+        function renderTicketDetail(ticketId) {
+            const item = ticketsData.find(t => t.id === ticketId);
+            if (!item) return;
+
+            document.getElementById('detail-ticket-id').innerText = item.id;
+            document.getElementById('detail-subject').innerText = item.subject;
+            document.getElementById('detail-customer-name').innerText = item.customer;
+            document.getElementById('detail-customer-email').innerText = item.email;
+            document.getElementById('detail-tier').innerText = item.tier;
+            document.getElementById('detail-avatar').innerText = item.avatar;
+            document.getElementById('detail-body').innerText = item.body;
+            document.getElementById('detail-timestamp').innerText = "Received: 8 mins ago";
+            document.getElementById('detail-channel').innerText = `Channel: ${item.channel}`;
+
+            // Urgency Badge
+            const urgBadge = document.getElementById('detail-urgency-badge');
+            urgBadge.innerText = item.urgency;
+            urgBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border " + 
+                (item.urgency === 'Critical' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-glow-rose' :
+                 item.urgency === 'High' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                 item.urgency === 'Medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20');
+
+            // AI Confidence Bar
+            document.getElementById('detail-confidence').innerText = `AI Confidence: ${item.confidence}%`;
+            document.getElementById('confidence-bar').style.width = `${item.confidence}%`;
+
+            // Metadata Entities
+            document.getElementById('entity-sentiment').innerText = item.sentiment;
+            document.getElementById('entity-sla').innerText = item.slaTime;
+            document.getElementById('entity-service').innerText = item.affectedService;
+            document.getElementById('entity-risk').innerText = item.riskLevel;
+
+            // Risk Tags Cloud
+            const tagsContainer = document.getElementById('risk-tags-container');
+            tagsContainer.innerHTML = "";
+            item.riskTags.forEach(tag => {
+                const tagEl = document.createElement('span');
+                tagEl.className = "px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-300 border border-slate-800";
+                tagEl.innerText = tag;
+                tagsContainer.appendChild(tagEl);
+            });
+
+            // Target Agent & Dept
+            document.getElementById('suggested-dept').innerText = item.predictedDept;
+            document.getElementById('suggested-agent-name').innerText = item.suggestedAgent;
+            document.getElementById('suggested-agent-role').innerText = item.agentRole;
+            document.getElementById('agent-avatar').innerText = item.agentAvatar;
+
+            // Workload calculation
+            const pct = Math.round((item.workload / item.maxWorkload) * 100);
+            const workloadBar = document.getElementById('workload-bar');
+            workloadBar.style.width = `${pct}%`;
+            workloadBar.className = `h-full ${pct > 75 ? 'bg-rose-500' : pct > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`;
+            document.getElementById('workload-text').innerText = `${item.workload} / ${item.maxWorkload} active`;
+
+            // Macro Auto-Response
+            document.getElementById('macro-response-text').value = item.macroResponse;
+        }
+
+        function approveAndRoute() {
+            const index = ticketsData.findIndex(t => t.id === selectedTicketId);
+            if (index === -1) return;
+
+            const routedItem = ticketsData[index];
+            ticketsData.splice(index, 1);
+
+            // Update stats
+            stats.unrouted = ticketsData.length;
+            if (routedItem.urgency === "Critical" && stats.critical > 0) {
+                stats.critical -= 1;
+            }
+            
+            document.getElementById('stat-unrouted').innerText = `${stats.unrouted} Pending`;
+            document.getElementById('stat-critical').innerText = `${stats.critical} Urgent`;
+
+            showToast(`Ticket #${routedItem.id} dispatched to ${routedItem.suggestedAgent} (${routedItem.predictedDept})`, "success");
+
+            if (ticketsData.length > 0) {
+                selectedTicketId = ticketsData[0].id;
+                renderTicketList();
+                renderTicketDetail(selectedTicketId);
+            } else {
+                renderTicketList();
+                document.getElementById('detail-subject').innerText = "All support tickets routed!";
+                document.getElementById('detail-body').innerText = "The incoming support queue is currently clear.";
+            }
+        }
+
+        function manualReroute(newDept) {
+            if (!newDept) return;
+            const item = ticketsData.find(t => t.id === selectedTicketId);
+            if (!item) return;
+
+            item.predictedDept = newDept;
+            item.confidence = 100; // Human override 100% confidence
+            item.suggestedAgent = newDept.includes("Tech") ? "Marcus Vance" :
+                                  newDept.includes("Billing") ? "Elena Rostova" :
+                                  newDept.includes("Security") ? "Sophia Chen" :
+                                  newDept.includes("Product") ? "David Kim" : "Lucas Wright";
+            
+            renderTicketList();
+            renderTicketDetail(selectedTicketId);
+            showToast(`Manually re-routed #${item.id} to ${newDept}`, "info");
+        }
+
+        function escalatePriority() {
+            const item = ticketsData.find(t => t.id === selectedTicketId);
+            if (!item) return;
+
+            item.urgency = "Critical";
+            item.slaTime = "10m left";
+            item.riskLevel = "CRITICAL ESCALATION";
+            
+            stats.critical += 1;
+            document.getElementById('stat-critical').innerText = `${stats.critical} Urgent`;
+
+            renderTicketList();
+            renderTicketDetail(selectedTicketId);
+            showToast(`Ticket #${item.id} escalated to CRITICAL SLA priority!`, "warning");
+        }
+
+        function regenerateMacro() {
+            const overlay = document.getElementById('macro-loading-overlay');
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                const item = ticketsData.find(t => t.id === selectedTicketId);
+                if (item) {
+                    const textEl = document.getElementById('macro-response-text');
+                    textEl.value = `[AI Auto-Generated Resolution Macro]\n\nDear ${item.customer},\n\nOur team has received ticket ${item.id} regarding "${item.subject}". A specialist in ${item.predictedDept} has been assigned to complete investigation within SLA guidelines.`;
+                }
+                overlay.classList.add('hidden');
+                showToast("Contextual resolution template updated!", "success");
+            }, 500);
+        }
+
+        function batchProcessQueue() {
+            if (ticketsData.length === 0) {
+                showToast("No tickets available for batch routing", "info");
+                return;
+            }
+
+            const initialCount = ticketsData.length;
+            ticketsData = ticketsData.filter(t => t.confidence < 95);
+            const routedCount = initialCount - ticketsData.length;
+
+            stats.unrouted = ticketsData.length;
+            document.getElementById('stat-unrouted').innerText = `${stats.unrouted} Pending`;
+
+            if (ticketsData.length > 0) {
+                selectedTicketId = ticketsData[0].id;
+                renderTicketList();
+                renderTicketDetail(selectedTicketId);
+            } else {
+                renderTicketList();
+            }
+
+            showToast(`Batch Auto-Routed ${routedCount} high-confidence tickets!`, "success");
+        }
+
+        function triggerSimulateTicket() {
+            const pool = [
+                {
+                    customer: "Samantha Reed",
+                    email: "s.reed@fintech-layer.io",
+                    avatar: "SR",
+                    tier: "Enterprise VIP",
+                    subject: "Webhook API Authentication Signature Mismatch on Endpoint /v2/payouts",
+                    body: "Hello Support team,\n\nOur automated payment processing service is failing validation on webhook endpoint /v2/payouts due to a signature hash discrepancy.\n\nPlease advise urgent patch ETA.",
+                    channel: "API",
+                    urgency: "Critical",
+                    predictedDept: "Tech Support",
+                    confidence: 97,
+                    sentiment: "Critical Frustration",
+                    slaTime: "15m left",
+                    affectedService: "Payout API Gateway",
+                    riskLevel: "High ($40k Transaction Risk)",
+                    riskTags: ["Webhook Signature", "API v2", "Payout Failure"],
+                    suggestedAgent: "Marcus Vance",
+                    agentRole: "Sr. Infrastructure Engineer",
+                    agentAvatar: "MV",
+                    workload: 3,
+                    maxWorkload: 5,
+                    macroResponse: "Hi Samantha,\n\nOur API engineering team has logged the signature validation discrepancy on /v2/payouts. Marcus Vance is reviewing the gateway key signing configuration right now."
+                },
+                {
+                    customer: "Oliver Zhang",
+                    email: "ozhang@cloud-native.com",
+                    avatar: "OZ",
+                    tier: "Growth Tier",
+                    subject: "Request for SOC2 Type II Attestation Document for Vendor Compliance",
+                    body: "Hi Team,\n\nOur security officer is reviewing our active SaaS vendors. Could you provide your latest SOC2 compliance attestation report?",
+                    channel: "Email",
+                    urgency: "Low",
+                    predictedDept: "Security & Compliance",
+                    confidence: 96,
+                    sentiment: "Neutral",
+                    slaTime: "12h left",
+                    affectedService: "Vendor Compliance",
+                    riskLevel: "Low Risk",
+                    riskTags: ["SOC2 Attestation", "Vendor Review"],
+                    suggestedAgent: "Sophia Chen",
+                    agentRole: "Head of Information Security",
+                    agentAvatar: "SC",
+                    workload: 1,
+                    maxWorkload: 5,
+                    macroResponse: "Hi Oliver,\n\nOur SOC2 Type II compliance report for the current operational period is available for download via your compliance dashboard portal."
+                }
+            ];
+
+            const t = pool[Math.floor(Math.random() * pool.length)];
+            const newId = "TCK-" + Math.floor(8927 + Math.random() * 1000);
+
+            const newTicket = {
+                id: newId,
+                customer: t.customer,
+                email: t.email,
+                avatar: t.avatar,
+                tier: t.tier,
+                subject: t.subject,
+                body: t.body,
+                channel: t.channel,
+                urgency: t.urgency,
+                predictedDept: t.predictedDept,
+                confidence: t.confidence,
+                sentiment: t.sentiment,
+                slaTime: t.slaTime,
+                affectedService: t.affectedService,
+                riskLevel: t.riskLevel,
+                riskTags: t.riskTags,
+                suggestedAgent: t.suggestedAgent,
+                agentRole: t.agentRole,
+                agentAvatar: t.agentAvatar,
+                workload: t.workload,
+                maxWorkload: t.maxWorkload,
+                macroResponse: t.macroResponse
+            };
+
+            ticketsData.unshift(newTicket);
+            selectedTicketId = newTicket.id;
+            
+            stats.unrouted = ticketsData.length;
+            if (t.urgency === "Critical") stats.critical += 1;
+            
+            document.getElementById('stat-unrouted').innerText = `${stats.unrouted} Pending`;
+            document.getElementById('stat-critical').innerText = `${stats.critical} Urgent`;
+
+            renderTicketList();
+            renderTicketDetail(selectedTicketId);
+
+            showToast(`Simulated new incoming ticket ${newId} from ${t.customer}`, "info");
+        }
+
+        function toggleAutoDispatch(cb) {
+            autoDispatchEnabled = cb.checked;
+            showToast(`Auto-Dispatch Mode: ${autoDispatchEnabled ? 'ENABLED' : 'DISABLED'}`, autoDispatchEnabled ? "success" : "warning");
+        }
+
+        function updateCounts() {
+            document.getElementById('count-all').innerText = ticketsData.length;
+            document.getElementById('count-tech').innerText = ticketsData.filter(t => t.predictedDept === 'Tech Support').length;
+            document.getElementById('count-billing').innerText = ticketsData.filter(t => t.predictedDept === 'Billing & Accounts').length;
+            document.getElementById('count-eng').innerText = ticketsData.filter(t => t.predictedDept === 'Product Engineering').length;
+            document.getElementById('count-sales').innerText = ticketsData.filter(t => t.predictedDept === 'Sales & Renewal').length;
+            document.getElementById('count-security').innerText = ticketsData.filter(t => t.predictedDept === 'Security & Compliance').length;
+            document.getElementById('queue-status-pill').innerText = `${ticketsData.length} Unrouted`;
+        }
+
+        // Helper Toast Dispatcher
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let icon = "info";
+            let borderColor = "border-indigo-500/40";
+            let bg = "bg-slate-900/90";
+
+            if (type === "success") {
+                icon = "check-circle-2";
+                borderColor = "border-emerald-500/40";
+            } else if (type === "warning") {
+                icon = "alert-triangle";
+                borderColor = "border-amber-500/40";
+            }
+
+            toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl border ${borderColor} ${bg} text-slate-100 text-xs shadow-glow-sm backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-4 h-4 ${type === 'success' ? 'text-emerald-400' : type === 'warning' ? 'text-amber-400' : 'text-indigo-400'}"></i>
+                <span class="font-medium">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
